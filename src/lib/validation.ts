@@ -207,7 +207,8 @@ export const sanitizeCommand = (command: string): string => {
 // SQL injection prevention (basic)
 export const sanitizeSqlInput = (input: string): string => {
   return input
-    .replace(/[';--]/g, '') // Remove SQL injection characters
+    .replace(/[';]/g, '') // Remove SQL injection characters (fixed regex)
+    .replace(/--/g, '') // Remove SQL comments
     .replace(/union/gi, '') // Remove UNION keyword
     .replace(/select/gi, '') // Remove SELECT keyword
     .replace(/insert/gi, '') // Remove INSERT keyword

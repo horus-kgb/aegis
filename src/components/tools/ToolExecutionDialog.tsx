@@ -13,6 +13,7 @@ import { useCreateJob } from "@/hooks/useJobs";
 import { useProjects } from "@/hooks/useProjects";
 import { useToast } from "@/hooks/use-toast";
 import { validationSchemas, validateUserInput, sanitizeInput } from "@/lib/validation";
+import { getToolDisplayName } from "@/lib/toolMappings";
 import { LucideIcon, Play, AlertTriangle, Info, Target, Settings } from "lucide-react";
 
 interface ToolExecutionDialogProps {
@@ -778,10 +779,10 @@ export function ToolExecutionDialog({ open, onOpenChange, tool }: ToolExecutionD
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <tool.icon className="h-6 w-6" />
-            Execute {tool.name}
+            Execute {getToolDisplayName(tool.name)}
           </DialogTitle>
           <DialogDescription>
-            Configure and run {tool.name} v{tool.version}
+            Configure and run {getToolDisplayName(tool.name)} v{tool.version}
           </DialogDescription>
         </DialogHeader>
 
@@ -831,7 +832,7 @@ export function ToolExecutionDialog({ open, onOpenChange, tool }: ToolExecutionD
                   <Label htmlFor="jobName">Job Name</Label>
                   <Input
                     id="jobName"
-                    placeholder={`${tool.name} scan`}
+                    placeholder={`${getToolDisplayName(tool.name)} scan`}
                     value={jobName}
                     onChange={(e) => setJobName(e.target.value)}
                   />

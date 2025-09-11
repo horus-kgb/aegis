@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { getToolDisplayName, getToolMapping } from "@/lib/toolMappings";
 import { 
   Target, 
   Search, 
@@ -28,6 +29,7 @@ import {
 const offensiveTools = [
   {
     name: "Nmap",
+    displayName: "Alpha Scanner",
     description: "Network discovery and security auditing tool for port scanning and host enumeration",
     icon: Target,
     category: "recon" as const,
@@ -36,7 +38,8 @@ const offensiveTools = [
     status: "ready" as const,
   },
   {
-    name: "Nuclei", 
+    name: "Nuclei",
+    displayName: "Beta Engine", 
     description: "Fast vulnerability scanner with community-powered templates for web applications",
     icon: Bug,
     category: "vuln" as const,
@@ -64,6 +67,7 @@ const offensiveTools = [
   },
   {
     name: "SQLMap",
+    displayName: "Gamma Analyzer",
     description: "Automatic SQL injection detection and exploitation tool with database takeover features",
     icon: Database,
     category: "exploit" as const,
@@ -73,6 +77,7 @@ const offensiveTools = [
   },
   {
     name: "Metasploit",
+    displayName: "Delta Framework",
     description: "Advanced penetration testing framework with extensive exploit and payload collection",
     icon: Terminal,
     category: "exploit" as const,
@@ -82,6 +87,7 @@ const offensiveTools = [
   },
   {
     name: "Hydra",
+    displayName: "Epsilon Engine",
     description: "Parallelized login cracker supporting numerous protocols and services",
     icon: Key,
     category: "exploit" as const, 
@@ -91,6 +97,7 @@ const offensiveTools = [
   },
   {
     name: "Hashcat",
+    displayName: "Zeta Processor",
     description: "Advanced password recovery tool supporting various hash algorithms and attack modes",
     icon: Lock,
     category: "post-exploit" as const,
@@ -247,7 +254,10 @@ const OffensiveTools = () => {
               {filteredTools.map((tool) => (
                 <ToolCard
                   key={tool.name}
-                  tool={tool}
+                  tool={{
+                    ...tool,
+                    name: tool.displayName || tool.name // Use display name if available
+                  }}
                   onRun={() => {
                     if (tool.status === "running") {
                       setShowJobMonitor(true);
