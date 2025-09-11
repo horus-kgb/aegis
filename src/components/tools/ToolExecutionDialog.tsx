@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FileUpload, HashFileUpload, WordlistUpload, MalwareUpload, EvidenceUpload } from "@/components/ui/file-upload";
 import { useCreateJob } from "@/hooks/useJobs";
 import { useProjects } from "@/hooks/useProjects";
 import { useToast } from "@/hooks/use-toast";
+import { validationSchemas, validateUserInput, sanitizeInput } from "@/lib/validation";
 import { LucideIcon, Play, AlertTriangle, Info, Target, Settings } from "lucide-react";
 
 interface ToolExecutionDialogProps {
@@ -586,6 +588,7 @@ export function ToolExecutionDialog({ open, onOpenChange, tool }: ToolExecutionD
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [jobName, setJobName] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
   const createJob = useCreateJob();
   const { data: projects } = useProjects();
@@ -606,7 +609,76 @@ export function ToolExecutionDialog({ open, onOpenChange, tool }: ToolExecutionD
   };
 
   const handleParameterChange = (key: string, value: any) => {
-    setParameters(prev => ({ ...prev, [key]: value }));
+    try {
+      let sanitizedValue = value;
+      
+      // Apply appropriate validation and sanitization based on parameter type
+      if (typeof value === 'string') {
+        if (key === 'target' || key === 'domain') {
+          sanitizedValue = validateUserInput(value, 'domain');
+        } else if (key === 'url') {
+          sanitizedValue = validateUserInput(value, 'url');
+        } else if (key === 'ports') {
+          sanitizedValue = validateUserInput(value, 'port');
+        } else {
+          sanitizedValue = sanitizeInput(value);
+        }
+      }
+      
+      setParameters(prev => ({ ...prev, [key]: sanitizedValue }));
+    } catch (error) {
+      toast({
+        title: "Validation Error",
+        description: error instanceof Error ? error.message : "Invalid input format",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleFilesSelected = (files: File[]) => {
+    setUploadedFiles(files);
+    // Update parameters with file paths for tools that need them
+    if (files.length > 0) {
+      setParameters(prev => ({ 
+        ...prev, 
+        filePaths: files.map(f => f.name),
+        files: files 
+      }));
+    }
+  };
+
+  const getFileUploadComponent = () => {
+    const toolName = tool.name.toLowerCase();
+    
+    if (toolName.includes('hashcat') || toolName.includes('hash')) {
+      return <HashFileUpload onFilesSelected={handleFilesSelected} maxFiles={5} />;
+    }
+    
+    if (toolName.includes('hydra') || toolName.includes('brute') || toolName.includes('wordlist')) {
+      return <WordlistUpload onFilesSelected={handleFilesSelected} maxFiles={3} />;
+    }
+    
+    if (toolName.includes('malware') || toolName.includes('sandbox')) {
+      return <MalwareUpload onFilesSelected={handleFilesSelected} maxFiles={1} maxSize={50 * 1024 * 1024} />;
+    }
+    
+    if (toolName.includes('forensics') || toolName.includes('evidence')) {
+      return <EvidenceUpload onFilesSelected={handleFilesSelected} maxFiles={3} maxSize={100 * 1024 * 1024} />;
+    }
+    
+    // Default file upload for other tools
+    return <FileUpload onFilesSelected={handleFilesSelected} maxFiles={5} />;
+  };
+
+  const needsFileUpload = () => {
+    const toolName = tool.name.toLowerCase();
+    return toolName.includes('hashcat') || 
+           toolName.includes('hydra') || 
+           toolName.includes('malware') || 
+           toolName.includes('forensics') ||
+           toolName.includes('evidence') ||
+           toolName.includes('wordlist') ||
+           toolName.includes('hash');
   };
 
   const handleSubmit = async () => {
@@ -614,6 +686,37 @@ export function ToolExecutionDialog({ open, onOpenChange, tool }: ToolExecutionD
       toast({
         title: "Missing Information",
         description: "Please enter a job name.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate parameters based on tool type
+    try {
+      const toolName = tool.name.toLowerCase();
+      let validationSchema;
+      
+      if (toolName.includes('nmap')) {
+        validationSchema = validationSchemas.nmap;
+      } else if (toolName.includes('nuclei')) {
+        validationSchema = validationSchemas.nuclei;
+      } else if (toolName.includes('amass')) {
+        validationSchema = validationSchemas.amass;
+      } else if (toolName.includes('sqlmap')) {
+        validationSchema = validationSchemas.sqlmap;
+      } else if (toolName.includes('hydra')) {
+        validationSchema = validationSchemas.hydra;
+      } else if (toolName.includes('hashcat')) {
+        validationSchema = validationSchemas.hashcat;
+      }
+      
+      if (validationSchema) {
+        validationSchema.parse(parameters);
+      }
+    } catch (error) {
+      toast({
+        title: "Validation Error",
+        description: error instanceof Error ? error.message : "Invalid parameters",
         variant: "destructive"
       });
       return;
@@ -797,6 +900,20 @@ export function ToolExecutionDialog({ open, onOpenChange, tool }: ToolExecutionD
                 ))}
               </CardContent>
             </Card>
+
+            {needsFileUpload() && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    File Upload
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {getFileUploadComponent()}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Preview Panel */}
